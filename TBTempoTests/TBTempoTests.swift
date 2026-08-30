@@ -4,6 +4,12 @@ import Testing
 @testable import TBTempo
 
 struct TBTempoTests {
+    @Test func appearanceMapsToExpectedColorScheme() {
+        #expect(AppAppearance.system.colorScheme == nil)
+        #expect(AppAppearance.light.colorScheme == .light)
+        #expect(AppAppearance.dark.colorScheme == .dark)
+    }
+
     @Test func CSVHandlesQuotedCommasAndNewlines() throws {
         let data = Data("name,note\n\"Tempo, House\",\"line one\nline two\"\n".utf8)
         let rows = try CSVReader.rows(data: data)

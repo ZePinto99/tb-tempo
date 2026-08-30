@@ -5,6 +5,7 @@ import SwiftUI
 struct TBTempoApp: App {
     private let container: ModelContainer
     @State private var dependencies: AppDependencies
+    @AppStorage("appAppearance") private var appAppearance = AppAppearance.system.rawValue
 
     init() {
         if let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
@@ -32,6 +33,7 @@ struct TBTempoApp: App {
         WindowGroup {
             RootTabView()
                 .environment(dependencies)
+                .preferredColorScheme(AppAppearance(rawValue: appAppearance)?.colorScheme)
         }
         .modelContainer(container)
     }

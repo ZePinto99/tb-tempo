@@ -9,6 +9,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage("notificationsEnabled") private var notificationsEnabled = false
     @AppStorage("notificationHour") private var notificationHour = 9
+    @AppStorage("appAppearance") private var appAppearance = AppAppearance.system.rawValue
     @State private var explainingNotifications = false
     @State private var backupWarning = false
     @State private var shareURL: URL?
@@ -19,6 +20,15 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section(String(localized: "Appearance")) {
+                Picker(String(localized: "Color scheme"), selection: $appAppearance) {
+                    ForEach(AppAppearance.allCases) { appearance in
+                        Text(appearance.title).tag(appearance.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
             Section(String(localized: "Migration")) {
                 NavigationLink { ImporterView() } label: { Label(String(localized: "Import TV Time History"), systemImage: "arrow.down.doc") }
                 NavigationLink { UnresolvedMatchesView() } label: { Label(String(localized: "Unresolved Matches"), systemImage: "questionmark.diamond") }

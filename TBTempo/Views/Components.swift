@@ -1,9 +1,21 @@
 import SwiftUI
 
 enum Brand {
-    static let indigo = Color(red: 0.10, green: 0.06, blue: 0.38)
-    static let violet = Color(red: 0.42, green: 0.20, blue: 0.92)
-    static let coral = Color(red: 1.00, green: 0.33, blue: 0.25)
+    static let indigo = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.16, green: 0.12, blue: 0.46, alpha: 1)
+            : UIColor(red: 0.10, green: 0.06, blue: 0.38, alpha: 1)
+    })
+    static let violet = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.56, green: 0.39, blue: 0.98, alpha: 1)
+            : UIColor(red: 0.42, green: 0.20, blue: 0.92, alpha: 1)
+    })
+    static let coral = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 1.00, green: 0.45, blue: 0.38, alpha: 1)
+            : UIColor(red: 1.00, green: 0.33, blue: 0.25, alpha: 1)
+    })
     static let gradient = LinearGradient(colors: [violet, coral], startPoint: .topLeading, endPoint: .bottomTrailing)
 }
 

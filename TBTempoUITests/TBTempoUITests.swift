@@ -17,5 +17,8 @@ final class TBTempoUITests: XCTestCase {
             button.tap()
         }
         XCTAssertTrue(app.navigationBars["Settings"].exists)
+        for appearance in ["System", "Light", "Dark"] {
+            XCTAssertTrue(app.buttons[appearance].exists, "Missing appearance option: \(appearance)")
+        }
     }
 }
