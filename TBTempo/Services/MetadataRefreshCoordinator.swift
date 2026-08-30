@@ -69,16 +69,20 @@ final class MetadataRefreshCoordinator {
         for existing in shows {
             do {
                 let tmdbID: Int
+                var expectedTVDBID: Int?
                 if let known = existing.tmdbID {
                     tmdbID = known
                 } else if let tvdbID = existing.tvdbID,
-                          let match = try await catalog.lookupTVDBSeries(id: tvdbID),
-                          TextNormalizer.title(match.title) == existing.normalizedTitle {
+                          let match = try await catalog.lookupTVDBSeries(id: tvdbID) {
                     tmdbID = match.id
+                    expectedTVDBID = tvdbID
                 } else {
                     throw CatalogError.noMatch
                 }
                 let details = try await catalog.show(tmdbID: tmdbID)
+                if let expectedTVDBID, details.tvdbID != expectedTVDBID {
+                    throw CatalogError.noMatch
+                }
                 _ = upsert(details, existing: existing, in: container.mainContext)
                 try await resolveExternalEpisodeIDs(for: existing)
                 try await fetchArtwork(for: existing)

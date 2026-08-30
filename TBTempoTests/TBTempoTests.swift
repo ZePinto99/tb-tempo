@@ -118,6 +118,51 @@ struct TBTempoTests {
     }
 
     @MainActor
+    @Test func failedZeroWatchImportCanBeRepaired() throws {
+        let fixture = try #require(Bundle(for: TestBundleMarker.self).url(forResource: "gdpr-sanitized", withExtension: "zip"))
+        let preview = try TVTimeImporter.preview(url: fixture)
+        let container = try makeContainer()
+        let context = container.mainContext
+
+        for draft in preview.series {
+            context.insert(Show(title: draft.title, tvdbID: draft.tvdbID))
+        }
+        for watch in preview.watches {
+            context.insert(UnresolvedImportRecord(
+                stableKey: watch.stableKey,
+                seriesTitle: watch.seriesTitle,
+                tvdbSeriesID: watch.tvdbSeriesID,
+                tvdbEpisodeID: watch.tvdbEpisodeID,
+                seasonNumber: watch.seasonNumber,
+                episodeNumber: watch.episodeNumber,
+                watchedAt: nil,
+                reason: "Old timestamp failure"
+            ))
+        }
+        context.insert(ImportReceipt(
+            fingerprint: preview.fingerprint,
+            sourceName: preview.sourceName,
+            seriesCount: preview.series.count,
+            watchCount: 0,
+            unresolvedCount: preview.watches.count,
+            duplicateCount: preview.duplicateCount,
+            exportedEpisodeCount: preview.exportedEpisodeCount,
+            calculatedEpisodeCount: 0,
+            exportedViewingMinutes: preview.exportedViewingMinutes,
+            calculatedViewingMinutes: 0
+        ))
+        try context.save()
+
+        let result = try TVTimeImporter.commit(preview, to: context)
+        #expect(result.insertedWatches == 2)
+        #expect(try context.fetch(FetchDescriptor<WatchEvent>()).count == 2)
+        #expect(try context.fetch(FetchDescriptor<UnresolvedImportRecord>()).count == preview.unresolved.count)
+        let receipts = try context.fetch(FetchDescriptor<ImportReceipt>())
+        #expect(receipts.count == 1)
+        #expect(receipts.first?.watchCount == 2)
+    }
+
+    @MainActor
     private func makeContainer() throws -> ModelContainer {
         let schema = Schema([Show.self, Episode.self, WatchEvent.self, ImportReceipt.self, UnresolvedImportRecord.self])
         return try ModelContainer(for: schema, configurations: [ModelConfiguration("Tests", schema: schema, isStoredInMemoryOnly: true)])

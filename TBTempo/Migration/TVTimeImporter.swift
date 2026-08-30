@@ -222,13 +222,18 @@ enum TVTimeImporter {
         let receiptFingerprint = preview.fingerprint
         var receiptDescriptor = FetchDescriptor<ImportReceipt>(predicate: #Predicate { $0.fingerprint == receiptFingerprint })
         receiptDescriptor.fetchLimit = 1
-        guard try context.fetch(receiptDescriptor).isEmpty else { throw TVTimeImportError.alreadyImported }
+        let existingReceipt = try context.fetch(receiptDescriptor).first
+        guard existingReceipt == nil || existingReceipt?.watchCount == 0 else {
+            throw TVTimeImportError.alreadyImported
+        }
 
         let existingShows = try context.fetch(FetchDescriptor<Show>())
         var showsByTVDB: [Int: Show] = [:]
         for show in existingShows { if let tvdbID = show.tvdbID { showsByTVDB[tvdbID] = show } }
-        let existingEvents = Set(try context.fetch(FetchDescriptor<WatchEvent>()).map(\.stableKey))
-        let existingUnresolved = Set(try context.fetch(FetchDescriptor<UnresolvedImportRecord>()).map(\.stableKey))
+        var existingEvents = Set(try context.fetch(FetchDescriptor<WatchEvent>()).map(\.stableKey))
+        var unresolvedByKey = Dictionary(
+            uniqueKeysWithValues: try context.fetch(FetchDescriptor<UnresolvedImportRecord>()).map { ($0.stableKey, $0) }
+        )
         var insertedSeries = 0
         var insertedWatches = 0
         var skipped = 0
@@ -255,7 +260,11 @@ enum TVTimeImporter {
             }
 
             for draft in preview.watches {
-                guard !existingEvents.contains(draft.stableKey) else { skipped += 1; continue }
+                guard !existingEvents.contains(draft.stableKey) else {
+                    if let stale = unresolvedByKey.removeValue(forKey: draft.stableKey) { context.delete(stale) }
+                    skipped += 1
+                    continue
+                }
                 guard let show = showsByTVDB[draft.tvdbSeriesID] else { continue }
                 let episode = show.episodes.first { $0.tvdbID == draft.tvdbEpisodeID }
                     ?? show.episodes.first { $0.seasonNumber == draft.seasonNumber && $0.episodeNumber == draft.episodeNumber }
@@ -277,35 +286,60 @@ enum TVTimeImporter {
                 let event = WatchEvent(stableKey: draft.stableKey, watchedAt: draft.watchedAt, source: .tvTimeV2, episode: episode)
                 context.insert(event)
                 episode.watchEvents.append(event)
+                existingEvents.insert(draft.stableKey)
+                if let stale = unresolvedByKey.removeValue(forKey: draft.stableKey) { context.delete(stale) }
                 if show.lastActivityAt == nil || draft.watchedAt > show.lastActivityAt! { show.lastActivityAt = draft.watchedAt }
                 insertedWatches += 1
             }
 
-            for draft in preview.unresolved where !existingUnresolved.contains(draft.stableKey) {
-                context.insert(UnresolvedImportRecord(
-                    stableKey: draft.stableKey,
-                    seriesTitle: draft.seriesTitle,
-                    tvdbSeriesID: draft.tvdbSeriesID,
-                    tvdbEpisodeID: draft.tvdbEpisodeID,
-                    seasonNumber: draft.seasonNumber,
-                    episodeNumber: draft.episodeNumber,
-                    watchedAt: draft.watchedAt,
-                    reason: draft.reason
-                ))
+            for draft in preview.unresolved {
+                if let existing = unresolvedByKey[draft.stableKey] {
+                    existing.seriesTitle = draft.seriesTitle
+                    existing.tvdbSeriesID = draft.tvdbSeriesID
+                    existing.tvdbEpisodeID = draft.tvdbEpisodeID
+                    existing.seasonNumber = draft.seasonNumber
+                    existing.episodeNumber = draft.episodeNumber
+                    existing.watchedAt = draft.watchedAt
+                    existing.reason = draft.reason
+                } else {
+                    let unresolved = UnresolvedImportRecord(
+                        stableKey: draft.stableKey,
+                        seriesTitle: draft.seriesTitle,
+                        tvdbSeriesID: draft.tvdbSeriesID,
+                        tvdbEpisodeID: draft.tvdbEpisodeID,
+                        seasonNumber: draft.seasonNumber,
+                        episodeNumber: draft.episodeNumber,
+                        watchedAt: draft.watchedAt,
+                        reason: draft.reason
+                    )
+                    context.insert(unresolved)
+                    unresolvedByKey[draft.stableKey] = unresolved
+                }
             }
 
-            context.insert(ImportReceipt(
+            let receipt = existingReceipt ?? ImportReceipt(
                 fingerprint: preview.fingerprint,
                 sourceName: preview.sourceName,
                 seriesCount: preview.series.count,
-                watchCount: insertedWatches,
+                watchCount: preview.watches.count,
                 unresolvedCount: preview.unresolved.count,
                 duplicateCount: preview.duplicateCount,
                 exportedEpisodeCount: preview.exportedEpisodeCount,
                 calculatedEpisodeCount: preview.watches.count,
                 exportedViewingMinutes: preview.exportedViewingMinutes,
                 calculatedViewingMinutes: preview.calculatedViewingMinutes
-            ))
+            )
+            receipt.importedAt = Date()
+            receipt.sourceName = preview.sourceName
+            receipt.seriesCount = preview.series.count
+            receipt.watchCount = preview.watches.count
+            receipt.unresolvedCount = preview.unresolved.count
+            receipt.duplicateCount = preview.duplicateCount
+            receipt.exportedEpisodeCount = preview.exportedEpisodeCount
+            receipt.calculatedEpisodeCount = preview.watches.count
+            receipt.exportedViewingMinutes = preview.exportedViewingMinutes
+            receipt.calculatedViewingMinutes = preview.calculatedViewingMinutes
+            if existingReceipt == nil { context.insert(receipt) }
             try context.save()
         } catch {
             context.rollback()
@@ -338,6 +372,12 @@ enum TVTimeImporter {
         if let date = formatter.date(from: value) { return date }
         formatter.formatOptions = [.withInternetDateTime]
         if let date = formatter.date(from: value) { return date }
+        let legacyFormatter = DateFormatter()
+        legacyFormatter.locale = Locale(identifier: "en_US_POSIX")
+        legacyFormatter.calendar = Calendar(identifier: .gregorian)
+        legacyFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        legacyFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        if let date = legacyFormatter.date(from: value) { return date }
         return epochMilliseconds(value)
     }
 }

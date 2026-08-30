@@ -54,7 +54,9 @@ Reconciliation precedence is:
 
 An archive SHA-256 receipt and stable watch keys make repeat imports idempotent. Ambiguous records appear in Settings → Unresolved Matches. Refresh the affected series metadata and choose the exact episode there to attach its preserved watch date.
 
-Imported placeholders remain useful offline immediately. With a TMDB token configured, **Refresh All Metadata** resolves TVDB series IDs through TMDB's external-ID endpoint and fills posters, episode metadata, future air dates, and runtimes. A normalized title equality check guards automatic matches; for renamed catalog entries, open the placeholder’s menu and choose **Match with TMDB** to confirm the current catalog result explicitly.
+Imported placeholders remain useful offline immediately. With a TMDB token configured, **Refresh All Metadata** resolves TVDB series IDs through TMDB's external-ID endpoint and fills posters, episode metadata, future air dates, and runtimes. Automatic matches require a unique external-ID result and verify the returned TVDB ID; unresolved entries can be matched manually from the placeholder’s menu.
+
+Legacy TV Time timestamps in `yyyy-MM-dd HH:mm:ss` format are interpreted as UTC. If an earlier attempt created a receipt but imported zero watches, selecting the same ZIP again repairs that failed attempt in place.
 
 ## Statistics semantics
 
