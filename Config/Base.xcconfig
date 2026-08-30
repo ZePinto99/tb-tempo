@@ -1,0 +1,10 @@
+// Shared, committed build settings. A local token file is optional so the
+// project still builds before TMDB has been configured.
+PRODUCT_BUNDLE_IDENTIFIER = com.josepinto.TBTempo
+MARKETING_VERSION = 1.0
+CURRENT_PROJECT_VERSION = 1
+IPHONEOS_DEPLOYMENT_TARGET = 26.0
+SWIFT_VERSION = 6.0
+TMDB_READ_ACCESS_TOKEN =
+#include? "TMDBConfig.xcconfig"
+INFOPLIST_KEY_TMDBReadAccessToken = $(TMDB_READ_ACCESS_TOKEN)

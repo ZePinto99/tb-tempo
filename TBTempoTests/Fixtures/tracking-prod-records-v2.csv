@@ -1,0 +1,8 @@
+total_movies_runtime,created_at,ep_watch_count,movie_watch_count,key,user_id,updated_at,series_follow_count,total_series_runtime,is_followed,most_recent_ep_watched,is_archived,s_id,is_for_later,followed_at,uuid,ep_no,is_unitary,ep_id,runtime,gsi,s_no,bulk_type,rewatch_count,is_special,movie_name,series_name,season_number,episode_number
+,2025-01-01T10:00:00Z,2,,fixture-series-a,0,2025-01-01T10:00:00Z,2,5400,true,,false,1001,false,1735689600000,fixture-a,,,,,,,,,,,Tempo House,,
+,2025-01-01T10:00:00Z,2,,fixture-series-b,0,2025-01-01T10:00:00Z,,,false,,true,1002,false,,fixture-b,,,,,,,,,,,Quiet Orbit,,
+,2025-01-02T20:00:00Z,,,watch-a1,0,2025-01-02T20:00:00Z,,,,,,1001,,,,1,true,2001,42,,1,single,0,false,,Tempo House,1,1
+,2025-01-03T20:00:00Z,,,watch-a2,0,2025-01-03T20:00:00Z,,,,,,1001,,,,2,true,2002,48,,1,single,0,false,,Tempo House,1,2
+,2025-01-03T20:00:00Z,,,watch-a2,0,2025-01-03T20:00:00Z,,,,,,1001,,,,2,true,2002,48,,1,single,0,false,,Tempo House,1,2
+,2025-02-01T20:00:00Z,,,watch-b1,0,2025-02-01T20:00:00Z,,,,,,1002,,,,1,true,3001,30,,1,single,0,false,,Quiet Orbit,1,1
+,2025-02-02T20:00:00Z,,,watch-b2,0,2025-02-02T20:00:00Z,,,,,,1002,,,,1,true,3002,30,,1,single,0,false,,Quiet Orbit,1,1

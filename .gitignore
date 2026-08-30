@@ -1,0 +1,11 @@
+.DS_Store
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+Config/TMDBConfig.xcconfig
+*.mobileprovision
+*.p12
+*.cer
+gdpr-data.zip
+*.tbtempo
