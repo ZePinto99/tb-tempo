@@ -124,8 +124,11 @@ struct TBTempoTests {
         let container = try makeContainer()
         let context = container.mainContext
 
+        var showsByTVDB: [Int: Show] = [:]
         for draft in preview.series {
-            context.insert(Show(title: draft.title, tvdbID: draft.tvdbID))
+            let show = Show(title: draft.title, tvdbID: draft.tvdbID)
+            context.insert(show)
+            showsByTVDB[draft.tvdbID] = show
         }
         for watch in preview.watches {
             context.insert(UnresolvedImportRecord(
@@ -139,6 +142,48 @@ struct TBTempoTests {
                 reason: "Old timestamp failure"
             ))
         }
+
+        let repairedDraft = try #require(preview.watches.first)
+        let repairedShow = try #require(showsByTVDB[repairedDraft.tvdbSeriesID])
+        let repairedEpisode = Episode(
+            seasonNumber: repairedDraft.seasonNumber,
+            episodeNumber: repairedDraft.episodeNumber,
+            title: "Old episode",
+            tvdbID: repairedDraft.tvdbEpisodeID,
+            show: repairedShow
+        )
+        context.insert(repairedEpisode)
+        repairedShow.episodes.append(repairedEpisode)
+        let repairedEvent = WatchEvent(
+            stableKey: repairedDraft.stableKey,
+            watchedAt: Date(timeIntervalSince1970: 1),
+            source: .tvTimeV2,
+            episode: repairedEpisode
+        )
+        context.insert(repairedEvent)
+        repairedEpisode.watchEvents.append(repairedEvent)
+
+        let unresolvedDraft = try #require(preview.unresolved.first)
+        let unresolvedSeriesID = try #require(unresolvedDraft.tvdbSeriesID)
+        let unresolvedShow = try #require(showsByTVDB[unresolvedSeriesID])
+        let incorrectEpisode = Episode(
+            seasonNumber: try #require(unresolvedDraft.seasonNumber),
+            episodeNumber: try #require(unresolvedDraft.episodeNumber),
+            title: "Incorrectly resolved episode",
+            tvdbID: unresolvedDraft.tvdbEpisodeID,
+            show: unresolvedShow
+        )
+        context.insert(incorrectEpisode)
+        unresolvedShow.episodes.append(incorrectEpisode)
+        let incorrectEvent = WatchEvent(
+            stableKey: unresolvedDraft.stableKey,
+            watchedAt: Date(timeIntervalSince1970: 1),
+            source: .tvTimeV2,
+            episode: incorrectEpisode
+        )
+        context.insert(incorrectEvent)
+        incorrectEpisode.watchEvents.append(incorrectEvent)
+
         context.insert(ImportReceipt(
             fingerprint: preview.fingerprint,
             sourceName: preview.sourceName,
@@ -154,8 +199,11 @@ struct TBTempoTests {
         try context.save()
 
         let result = try TVTimeImporter.commit(preview, to: context)
-        #expect(result.insertedWatches == 2)
-        #expect(try context.fetch(FetchDescriptor<WatchEvent>()).count == 2)
+        #expect(result.insertedWatches == 1)
+        let events = try context.fetch(FetchDescriptor<WatchEvent>())
+        #expect(events.count == 2)
+        #expect(events.first { $0.stableKey == repairedDraft.stableKey }?.watchedAt == repairedDraft.watchedAt)
+        #expect(events.allSatisfy { $0.stableKey != unresolvedDraft.stableKey })
         #expect(try context.fetch(FetchDescriptor<UnresolvedImportRecord>()).count == preview.unresolved.count)
         let receipts = try context.fetch(FetchDescriptor<ImportReceipt>())
         #expect(receipts.count == 1)

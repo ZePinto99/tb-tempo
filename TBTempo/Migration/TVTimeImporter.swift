@@ -226,11 +226,14 @@ enum TVTimeImporter {
         guard existingReceipt == nil || existingReceipt?.watchCount == 0 else {
             throw TVTimeImportError.alreadyImported
         }
+        let isRepairingFailedImport = existingReceipt != nil
 
         let existingShows = try context.fetch(FetchDescriptor<Show>())
         var showsByTVDB: [Int: Show] = [:]
         for show in existingShows { if let tvdbID = show.tvdbID { showsByTVDB[tvdbID] = show } }
-        var existingEvents = Set(try context.fetch(FetchDescriptor<WatchEvent>()).map(\.stableKey))
+        var eventsByKey = Dictionary(
+            uniqueKeysWithValues: try context.fetch(FetchDescriptor<WatchEvent>()).map { ($0.stableKey, $0) }
+        )
         var unresolvedByKey = Dictionary(
             uniqueKeysWithValues: try context.fetch(FetchDescriptor<UnresolvedImportRecord>()).map { ($0.stableKey, $0) }
         )
@@ -260,7 +263,11 @@ enum TVTimeImporter {
             }
 
             for draft in preview.watches {
-                guard !existingEvents.contains(draft.stableKey) else {
+                if let existingEvent = eventsByKey[draft.stableKey] {
+                    if isRepairingFailedImport {
+                        existingEvent.watchedAt = draft.watchedAt
+                        existingEvent.source = .tvTimeV2
+                    }
                     if let stale = unresolvedByKey.removeValue(forKey: draft.stableKey) { context.delete(stale) }
                     skipped += 1
                     continue
@@ -286,13 +293,16 @@ enum TVTimeImporter {
                 let event = WatchEvent(stableKey: draft.stableKey, watchedAt: draft.watchedAt, source: .tvTimeV2, episode: episode)
                 context.insert(event)
                 episode.watchEvents.append(event)
-                existingEvents.insert(draft.stableKey)
+                eventsByKey[draft.stableKey] = event
                 if let stale = unresolvedByKey.removeValue(forKey: draft.stableKey) { context.delete(stale) }
                 if show.lastActivityAt == nil || draft.watchedAt > show.lastActivityAt! { show.lastActivityAt = draft.watchedAt }
                 insertedWatches += 1
             }
 
             for draft in preview.unresolved {
+                if isRepairingFailedImport, let incorrectEvent = eventsByKey.removeValue(forKey: draft.stableKey) {
+                    context.delete(incorrectEvent)
+                }
                 if let existing = unresolvedByKey[draft.stableKey] {
                     existing.seriesTitle = draft.seriesTitle
                     existing.tvdbSeriesID = draft.tvdbSeriesID

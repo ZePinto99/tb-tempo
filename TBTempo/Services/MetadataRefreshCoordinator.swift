@@ -166,7 +166,8 @@ final class MetadataRefreshCoordinator {
         guard !records.isEmpty else { return }
         var existingKeys = Set(try container.mainContext.fetch(FetchDescriptor<WatchEvent>()).map(\.stableKey))
         for record in records {
-            guard let externalID = record.tvdbEpisodeID,
+            guard let watchedAt = record.watchedAt,
+                  let externalID = record.tvdbEpisodeID,
                   let mapped = try await catalog.lookupTVDBEpisode(id: externalID) else { continue }
             let exact = show.episodes.first { $0.tmdbID == mapped.tmdbID }
             let coordinateMatches = show.episodes.filter {
@@ -177,7 +178,7 @@ final class MetadataRefreshCoordinator {
             if !existingKeys.contains(record.stableKey) {
                 let event = WatchEvent(
                     stableKey: record.stableKey,
-                    watchedAt: record.watchedAt ?? Date(),
+                    watchedAt: watchedAt,
                     source: .tvTimeV2,
                     isEstimatedDate: record.watchedAt == nil,
                     episode: episode
