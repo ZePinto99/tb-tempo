@@ -9,3 +9,8 @@ Config/TMDBConfig.xcconfig
 *.cer
 gdpr-data.zip
 *.tbtempo
+web/node_modules/
+web/.next/
+web/*.tsbuildinfo
+web/.env.local
+web/.vercel/

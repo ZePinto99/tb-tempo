@@ -1,6 +1,6 @@
 # TB Tempo
 
-TB Tempo is a native, local-first iPhone series tracker. It uses SwiftUI, SwiftData, local notifications, and TMDB catalog metadata. There are no accounts, analytics, ads, CloudKit, or custom backend.
+TB Tempo is a local-first series tracker with a native iPhone app and an installable web companion. The iPhone app uses SwiftUI, SwiftData, local notifications, and TMDB catalog metadata. The web app is a Next.js PWA backed by private browser storage. There are no accounts, analytics, ads, or CloudKit.
 
 The project targets iOS 26.0 and builds with the closest installed SDK, Xcode 26.2 / iOS 26.2. The workspace was also tested on the installed iOS 26.4 simulator runtime.
 
@@ -15,6 +15,34 @@ The project targets iOS 26.0 and builds with the closest installed SDK, Xcode 26
 A free Apple developer account may require reinstalling/re-signing periodically. This project does not require App Store Connect or TestFlight.
 
 The app launches into the normal Today tab. Import is optional and is never forced at launch.
+
+## Run the web app
+
+The web companion lives in `web/`; it does not replace or modify the native target. It currently supports the Today queue, upcoming releases, the show library and season progress, statistics, server-side TMDB search, IndexedDB persistence, installable PWA behavior, viewing-history CSV export, and schema-1 `.tbtempo` backup import/export.
+
+1. Copy `web/.env.example` to `web/.env.local`.
+2. Add the same personal TMDB API Read Access Token to `TMDB_READ_ACCESS_TOKEN`. The token is read only by Next.js route handlers and is not included in browser JavaScript.
+3. Install and start the app:
+
+```sh
+cd web
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`. On an iPhone, deploy the site to a host that supports Next.js route handlers, open it in Safari, then choose **Share → Add to Home Screen**. A static-only host is insufficient for catalog search because the TMDB token must remain server-side.
+
+The web library is stored in IndexedDB for the current browser. Use Settings → Backup & transfer to move data between the web and iPhone apps. Merge preserves local records and inserts missing stable watch events; Replace uses only the selected backup.
+
+Web verification commands:
+
+```sh
+cd web
+npm test
+npm run typecheck
+npm run lint
+npm run build
+```
 
 ## TMDB configuration
 
@@ -88,6 +116,7 @@ See [the backup format](Documentation/BackupFormat.md) for the portable schema. 
 - `Migration/`: allowlisted ZIP access, RFC-style CSV parsing, preview, reconciliation, and commit.
 - `Backup/`: documented versioned JSON/ZIP backup and CSV export.
 - `Views/`: five-tab SwiftUI interface with Dynamic Type, semantic labels, dark mode, and reduced-motion-aware transitions.
+- `web/`: Next.js App Router PWA with an IndexedDB library, responsive app UI, schema-compatible backup transfer, and server-only TMDB route handlers.
 
 All visible SwiftUI string literals are localization-ready. English is the development language; a Portuguese strings catalog can be added later without changing the data model.
 

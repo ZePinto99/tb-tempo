@@ -1,0 +1,18 @@
+{
+  "name": "TB Tempo",
+  "short_name": "TB Tempo",
+  "description": "A private, local-first series tracker.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111110",
+  "theme_color": "#ef765f",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
