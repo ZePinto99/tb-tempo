@@ -1,4 +1,4 @@
-import type { Episode, LibraryPayload, Show } from "./types";
+import type { Episode, LibraryPayload, LibraryState, Show } from "./types";
 
 export function regularEpisodes(show: Show): Episode[] {
   return show.episodes.filter((episode) => !episode.isSpecial);
@@ -6,6 +6,25 @@ export function regularEpisodes(show: Show): Episode[] {
 
 export function watchedCount(show: Show): number {
   return regularEpisodes(show).filter((episode) => episode.watchEvents.length > 0).length;
+}
+
+export function libraryStateAfterProgress(show: Show, episodes: Episode[] = show.episodes): LibraryState {
+  const regular = episodes.filter((episode) => !episode.isSpecial);
+  const seriesIsFinished = show.status === "Ended" || show.status === "Canceled";
+  const watchedEveryRegularEpisode =
+    regular.length > 0 && regular.every((episode) => episode.watchEvents.length > 0);
+  return seriesIsFinished && watchedEveryRegularEpisode ? "completed" : show.libraryState;
+}
+
+export function applyAutomaticCompletions(payload: LibraryPayload): LibraryPayload {
+  let changed = false;
+  const shows = payload.shows.map((show) => {
+    const libraryState = libraryStateAfterProgress(show);
+    if (libraryState === show.libraryState) return show;
+    changed = true;
+    return { ...show, libraryState };
+  });
+  return changed ? { ...payload, shows } : payload;
 }
 
 export function nextUp(show: Show): Episode | undefined {

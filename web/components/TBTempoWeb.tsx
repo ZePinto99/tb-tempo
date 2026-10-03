@@ -4,9 +4,11 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { exportBackup, exportViewingHistory, mergeLibraries, readBackup } from "@/lib/backup";
 import {
+  applyAutomaticCompletions,
   coordinate,
   duration,
   imageURL,
+  libraryStateAfterProgress,
   nextUp,
   regularEpisodes,
   statsByShow,
@@ -615,7 +617,7 @@ export function TBTempoWeb() {
   useEffect(() => {
     let active = true;
     loadLibrary()
-      .then((stored) => { if (active) { setLibrary(stored); setReady(true); } })
+      .then((stored) => { if (active) { setLibrary(applyAutomaticCompletions(stored)); setReady(true); } })
       .catch((error: unknown) => { if (active) { setNotice(error instanceof Error ? error.message : "Unable to load local data."); setReady(true); } });
     if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
       void navigator.serviceWorker.register("/sw.js");
@@ -660,18 +662,20 @@ export function TBTempoWeb() {
         shows: current.shows.map((show) => {
           if (show.id !== showID) return show;
           const now = new Date().toISOString();
+          const episodes = show.episodes.map((episode) => {
+            if (episode.id !== episodeID) return episode;
+            return {
+              ...episode,
+              watchEvents: episode.watchEvents.length
+                ? []
+                : [{ stableKey: `manual:web:${crypto.randomUUID()}`, watchedAt: now, source: "manual" as const, isEstimatedDate: false }],
+            };
+          });
           return {
             ...show,
             lastActivityAt: now,
-            episodes: show.episodes.map((episode) => {
-              if (episode.id !== episodeID) return episode;
-              return {
-                ...episode,
-                watchEvents: episode.watchEvents.length
-                  ? []
-                  : [{ stableKey: `manual:web:${crypto.randomUUID()}`, watchedAt: now, source: "manual", isEstimatedDate: false }],
-              };
-            }),
+            libraryState: libraryStateAfterProgress(show, episodes),
+            episodes,
           };
         }),
       }),
@@ -686,21 +690,23 @@ export function TBTempoWeb() {
         shows: current.shows.map((show) => {
           if (show.id !== showID) return show;
           const now = new Date().toISOString();
+          const episodes = show.episodes.map((episode) =>
+            episode.seasonNumber !== season
+              ? episode
+              : {
+                  ...episode,
+                  watchEvents: watched
+                    ? episode.watchEvents.length
+                      ? episode.watchEvents
+                      : [{ stableKey: `manual:web:${crypto.randomUUID()}`, watchedAt: now, source: "manual" as const, isEstimatedDate: false }]
+                    : [],
+                },
+          );
           return {
             ...show,
             lastActivityAt: now,
-            episodes: show.episodes.map((episode) =>
-              episode.seasonNumber !== season
-                ? episode
-                : {
-                    ...episode,
-                    watchEvents: watched
-                      ? episode.watchEvents.length
-                        ? episode.watchEvents
-                        : [{ stableKey: `manual:web:${crypto.randomUUID()}`, watchedAt: now, source: "manual", isEstimatedDate: false }]
-                      : [],
-                  },
-            ),
+            libraryState: libraryStateAfterProgress(show, episodes),
+            episodes,
           };
         }),
       }),
@@ -744,7 +750,9 @@ export function TBTempoWeb() {
   async function importFile(file: File) {
     try {
       const incoming = await readBackup(file);
-      const next = importMode === "replace" ? incoming : mergeLibraries(library, incoming);
+      const next = applyAutomaticCompletions(
+        importMode === "replace" ? incoming : mergeLibraries(library, incoming),
+      );
       setUndo(structuredClone(library));
       setLibrary(next);
       setSelectedShowID(undefined);
