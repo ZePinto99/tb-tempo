@@ -18,7 +18,7 @@ function assertString(value: unknown, label: string): asserts value is string {
   }
 }
 
-function validatePayload(value: unknown): asserts value is LibraryPayload {
+export function assertLibraryPayload(value: unknown): asserts value is LibraryPayload {
   if (!value || typeof value !== "object") throw new Error("Invalid backup data.");
   const payload = value as Partial<LibraryPayload>;
   if (!Array.isArray(payload.shows) || !payload.notificationSettings) {
@@ -72,7 +72,7 @@ export async function readBackup(file: File): Promise<LibraryPayload> {
   }
 
   const payload: unknown = JSON.parse(dataText);
-  validatePayload(payload);
+  assertLibraryPayload(payload);
   return payload;
 }
 

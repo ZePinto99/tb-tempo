@@ -179,7 +179,36 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .settingsCard > p:not(.eyebrow) { color: var(--muted); line-height: 1.55; font-size: 13px; }
 .settingsIcon { width: 42px; aspect-ratio: 1; display: grid; place-items: center; border-radius: 13px; color: white; background: linear-gradient(135deg, var(--coral), var(--coral-deep)); margin-bottom: 24px; font-size: 19px; }
 .settingsIcon.soft { color: var(--coral-deep); background: var(--coral-pale); }
+.settingsIcon.cloudIcon { color: white; background: linear-gradient(145deg, #6f8fa0, #516d80); }
 .dataCard { grid-row: span 2; }
+.cloudCard { grid-column: 1 / -1; }
+.cloudHeading { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.cloudStatus { flex: none; border-radius: 999px; padding: 7px 10px; color: var(--muted); background: #f1ede7; font-size: 10px; font-weight: 700; }
+.cloudStatus.synced { color: var(--green); background: #e7f0e9; }
+.cloudStatus.syncing, .cloudStatus.connecting { color: #886627; background: #f7edda; }
+.cloudStatus.conflict, .cloudStatus.error { color: #a43e3a; background: #f9dfda; }
+.cloudStatus.offline { color: #725d49; background: #eee7df; }
+.cloudNotice, .conflictBox { margin-top: 20px; border-radius: 14px; padding: 15px; color: var(--muted); background: #f5f1eb; font-size: 12px; line-height: 1.5; }
+.cloudAuth { display: grid; gap: 15px; margin-top: 21px; }
+.cloudAuth form { display: grid; gap: 7px; }
+.cloudAuth label { color: var(--muted); font-size: 10px; font-weight: 700; }
+.cloudInputRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.cloudInputRow input { min-width: 0; border: 1px solid var(--line); border-radius: 13px; padding: 11px 13px; color: var(--ink); background: var(--paper-solid); outline: 0; }
+.cloudAccount { display: grid; gap: 15px; margin-top: 20px; }
+.cloudIdentity { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.cloudIdentity strong, .cloudIdentity small, .versionList strong, .versionList small { display: block; }
+.cloudIdentity strong { font-size: 12px; }.cloudIdentity small { margin-top: 3px; color: var(--muted); font-size: 10px; }
+.textButton { border: 0; padding: 6px; color: var(--coral-deep); background: transparent; font-size: 10px; font-weight: 750; cursor: pointer; }
+.conflictBox { margin: 0; color: var(--ink); background: #fff0e9; border: 1px solid rgba(204,83,78,.15); }
+.conflictBox > strong { font-size: 13px; }.conflictBox p { margin: 5px 0 13px; color: var(--muted); }
+.cloudActions { margin-top: 1px; }
+.versionHistory { border-top: 1px solid var(--line); padding-top: 13px; }
+.versionHistory summary { color: var(--muted); font-size: 11px; font-weight: 700; cursor: pointer; }
+.versionList { display: grid; margin-top: 8px; }
+.versionList > div { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); }
+.versionList > div:last-child { border-bottom: 0; }.versionList strong { font-size: 10px; }.versionList small { margin-top: 2px; color: var(--muted); font-size: 9px; }
+.cloudMessage { margin: 14px 0 0 !important; color: var(--green) !important; font-size: 11px !important; }
+.cloudMessage.error { color: #a43e3a !important; }
 .libraryNumbers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 25px 0; }
 .libraryNumbers div { padding: 16px 8px; background: #f5f1eb; border-radius: 13px; text-align: center; }.libraryNumbers strong, .libraryNumbers span { display: block; }.libraryNumbers strong { font-family: Georgia, serif; font-size: 25px; font-weight: 500; }.libraryNumbers span { color: var(--muted); font-size: 10px; margin-top: 4px; }
 .buttonStack { display: grid; gap: 9px; }
@@ -242,6 +271,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   .metricGrid { gap: 10px; }.metricCard { min-height: 142px; padding: 18px; }.metricCard strong { font-size: 27px; }
   .statsRow { grid-template-columns: 25px minmax(0,1fr) 63px; gap: 9px; padding: 13px 12px; }.statBar { display: none; }
   .settingsCard { padding: 22px; }
+  .cloudHeading { display: grid; }.cloudStatus { justify-self: start; }.cloudInputRow { grid-template-columns: 1fr; }.cloudInputRow .button { width: 100%; }
   .detailShell { padding: max(13px, calc(var(--safe-area-top) + 12px)) 11px max(80px, calc(var(--safe-area-bottom) + 40px)); }.detailHero { min-height: 560px; padding: 26px; display: block; }.detailPoster { width: 120px; margin-bottom: 23px; }.detailCopy h1 { font-size: 43px; }.detailCopy > p:not(.eyebrow) { font-size: 12px; }.seasonToolbar { align-items: stretch; flex-direction: column; }.seasonActions { justify-content: flex-end; }.detailEpisode { grid-template-columns: 38px 24px minmax(0,1fr); padding: 15px 11px; gap: 7px; }
   .dialogBackdrop { padding: 0; align-items: end; }.dialog { border-radius: 25px 25px 0 0; max-height: 92svh; padding: 23px 17px calc(20px + var(--safe-area-bottom)); }.catalogResult { grid-template-columns: 52px minmax(0,1fr) auto; gap: 9px; }.searchPoster { width: 52px; }.catalogResult .button { padding: 8px 10px; font-size: 11px; }.catalogSearch { grid-template-columns: 1fr; }.catalogSearch .button { width: 100%; }
   .toast { bottom: max(88px, calc(72px + var(--safe-area-bottom))); }
@@ -250,7 +280,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 @media (prefers-color-scheme: dark) {
   :root { --ink: #f2eee7; --muted: #9f9991; --canvas: #111110; --paper: rgba(34,32,30,.82); --paper-solid: #252321; --line: rgba(255,255,255,.09); --coral-pale: rgba(235,114,94,.16); --shadow: 0 18px 55px rgba(0,0,0,.2); }
   body { background: radial-gradient(circle at 88% 4%, rgba(235,114,94,.08), transparent 30rem), var(--canvas); }
-  .sidebar, .mobileNav { background: rgba(25,24,22,.88); border-color: var(--line); }.localBadge, .searchField, .filterPills { background: rgba(255,255,255,.04); }.filterPills button.selected, .seasonTabs button.selected, .backButton { background: #2b2927; }.button.secondary, .watchButton { background: #2d2a27; }.progressTrack, .statBar { background: #3e3a36; }.libraryNumbers div, .modePicker button { background: #2b2927; }.privacyNote { background: rgba(82,121,102,.15); }.dialog { background: #1d1c1a; }.closeButton { background: #34312e; }.catalogSearch input { color: var(--ink); background: #282624; }.detailEpisodes { background: rgba(34,32,30,.95); }.emptyState::before { opacity: .6; }
+  .sidebar, .mobileNav { background: rgba(25,24,22,.88); border-color: var(--line); }.localBadge, .searchField, .filterPills { background: rgba(255,255,255,.04); }.filterPills button.selected, .seasonTabs button.selected, .backButton { background: #2b2927; }.button.secondary, .watchButton { background: #2d2a27; }.progressTrack, .statBar { background: #3e3a36; }.libraryNumbers div, .modePicker button, .cloudNotice { background: #2b2927; }.cloudStatus { background: #322f2c; }.cloudStatus.synced { background: rgba(82,121,102,.2); }.cloudInputRow input { background: #282624; }.conflictBox { background: rgba(204,83,78,.12); }.privacyNote { background: rgba(82,121,102,.15); }.dialog { background: #1d1c1a; }.closeButton { background: #34312e; }.catalogSearch input { color: var(--ink); background: #282624; }.detailEpisodes { background: rgba(34,32,30,.95); }.emptyState::before { opacity: .6; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CloudBackupCard } from "@/components/CloudBackupCard";
+import { type CloudBackupController, useCloudBackup } from "@/hooks/useCloudBackup";
 import { exportBackup, exportViewingHistory, mergeLibraries, readBackup } from "@/lib/backup";
 import {
   applyAutomaticCompletions,
@@ -506,11 +508,13 @@ function StatisticsPage({ library }: { library: LibraryPayload }) {
 
 function SettingsPage({
   library,
+  cloud,
   importMode,
   setImportMode,
   onImport,
 }: {
   library: LibraryPayload;
+  cloud: CloudBackupController;
   importMode: ImportMode;
   setImportMode: (mode: ImportMode) => void;
   onImport: (file: File) => void;
@@ -523,6 +527,8 @@ function SettingsPage({
   );
   return (
     <div className="settingsGrid">
+      <CloudBackupCard cloud={cloud} />
+
       <section className="settingsCard panel dataCard">
         <div className="settingsIcon">↗</div>
         <p className="eyebrow">Move without lock-in</p>
@@ -566,8 +572,8 @@ function SettingsPage({
         <div className="settingsIcon soft">＋</div>
         <p className="eyebrow">Website, meet home screen</p>
         <h2>Install as an app</h2>
-        <p>On iPhone, open this site in Safari, tap Share, then choose <strong>Add to Home Screen</strong>. Your library remains in this browser’s private storage.</p>
-        <div className="privacyNote"><span>◉</span><div><strong>Local-first</strong><small>No account, analytics, ads, or cloud database.</small></div></div>
+        <p>On iPhone, open this site in Safari, tap Share, then choose <strong>Add to Home Screen</strong>. Your library remains available in this browser’s private storage.</p>
+        <div className="privacyNote"><span>◉</span><div><strong>Local-first</strong><small>No analytics or ads. Cloud backup is optional.</small></div></div>
       </section>
     </div>
   );
@@ -707,6 +713,7 @@ export function TBTempoWeb() {
   const [notice, setNotice] = useState<string>();
   const [undo, setUndo] = useState<LibraryPayload>();
   const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const cloud = useCloudBackup(library, ready, setLibrary);
 
   useEffect(() => {
     let active = true;
@@ -891,7 +898,7 @@ export function TBTempoWeb() {
         <nav aria-label="Primary navigation">
           {NAVIGATION.map((item) => <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)}><span>{item.symbol}</span>{item.label}</button>)}
         </nav>
-        <div className="localBadge"><span>●</span><div><strong>Local library</strong><small>Saved on this device</small></div></div>
+        <div className="localBadge"><span>●</span><div><strong>{cloud.userEmail ? "Local + cloud" : "Local library"}</strong><small>{cloud.userEmail ? "Private backup enabled" : "Saved on this device"}</small></div></div>
       </aside>
 
       <div className="mainColumn">
@@ -904,7 +911,7 @@ export function TBTempoWeb() {
           {tab === "upcoming" && <UpcomingPage library={library} onOpenShow={setSelectedShowID} onToggle={toggleEpisode} />}
           {tab === "shows" && <ShowsPage library={library} onOpenShow={setSelectedShowID} />}
           {tab === "statistics" && <StatisticsPage library={library} />}
-          {tab === "settings" && <SettingsPage library={library} importMode={importMode} setImportMode={setImportMode} onImport={(file) => void importFile(file)} />}
+          {tab === "settings" && <SettingsPage library={library} cloud={cloud} importMode={importMode} setImportMode={setImportMode} onImport={(file) => void importFile(file)} />}
         </div>
       </div>
 
