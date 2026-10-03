@@ -8,9 +8,11 @@ import {
   coordinate,
   duration,
   imageURL,
+  isCaughtUp,
   libraryStateAfterProgress,
   nextUp,
   regularEpisodes,
+  releasedRegularEpisodes,
   statsByShow,
   totals,
   watchedCount,
@@ -75,7 +77,7 @@ function pageDescription(tab: Tab): string {
     case "today":
       return "Pick up exactly where you left off.";
     case "upcoming":
-      return "Your followed series, in release order.";
+      return "Confirmed releases and series still waiting for dates.";
     case "shows":
       return "Everything you follow, all in one place.";
     case "statistics":
@@ -102,17 +104,21 @@ function Poster({ show, priority = false }: { show: Show; priority?: boolean }) 
   );
 }
 
-function ProgressBar({ show }: { show: Show }) {
-  const total = regularEpisodes(show).length;
-  const watched = watchedCount(show);
+function ProgressBar({ show, releasedOnly = false }: { show: Show; releasedOnly?: boolean }) {
+  const released = releasedRegularEpisodes(show);
+  const episodes = releasedOnly && released.length > 0 ? released : regularEpisodes(show);
+  const total = episodes.length;
+  const watched = releasedOnly
+    ? episodes.filter((episode) => episode.watchEvents.length > 0).length
+    : watchedCount(show);
   const percent = total ? Math.round((watched / total) * 100) : 0;
   return (
-    <div className="progressBlock" aria-label={`${watched} of ${total} episodes watched`}>
+    <div className="progressBlock" aria-label={`${watched} of ${total} ${releasedOnly ? "released " : ""}episodes watched`}>
       <div className="progressTrack">
         <span style={{ width: `${percent}%` }} />
       </div>
       <small>
-        {watched}/{total} · {percent}%
+        {watched}/{total}{releasedOnly ? " released" : ""} · {percent}%
       </small>
     </div>
   );
@@ -197,13 +203,21 @@ function TodayPage({
   onOpenShow: (id: string) => void;
   onToggle: (showID: string, episodeID: string) => void;
 }) {
+  const [showAllNext, setShowAllNext] = useState(false);
   if (library.shows.length === 0) return <EmptyState onAdd={onAdd} onImport={onImport} />;
 
   const active = library.shows.filter((show) => show.libraryState === "active");
-  const queue = active
+  const stillWatching = active
+    .filter((show) => !isCaughtUp(show))
+    .sort((a, b) => (b.lastActivityAt ?? "").localeCompare(a.lastActivityAt ?? ""));
+  const caughtUp = active
+    .filter((show) => isCaughtUp(show))
+    .sort((a, b) => a.title.localeCompare(b.title));
+  const queue = stillWatching
     .map((show) => ({ show, episode: nextUp(show) }))
     .filter((item): item is { show: Show; episode: Episode } => Boolean(item.episode))
     .sort((a, b) => (b.show.lastActivityAt ?? "").localeCompare(a.show.lastActivityAt ?? ""));
+  const visibleQueue = showAllNext ? queue : queue.slice(0, 5);
   const recent = library.shows
     .flatMap((show) =>
       show.episodes.flatMap((episode) =>
@@ -214,15 +228,15 @@ function TodayPage({
     .slice(0, 5);
 
   return (
-    <div className="pageStack">
+    <div className="pageStack todayPage">
       {queue.length > 0 && (
         <section>
           <div className="sectionHeading">
             <div><p className="eyebrow">Keep your rhythm</p><h2>Next up</h2></div>
             <span>{queue.length} waiting</span>
           </div>
-          <div className="episodeList panel">
-            {queue.slice(0, 8).map(({ show, episode }) => (
+          <div className="episodeList panel todayQueue">
+            {visibleQueue.map(({ show, episode }) => (
               <EpisodeRow
                 key={episode.id}
                 show={show}
@@ -232,6 +246,15 @@ function TodayPage({
               />
             ))}
           </div>
+          {queue.length > 5 && (
+            <button
+              className="queueToggle"
+              aria-expanded={showAllNext}
+              onClick={() => setShowAllNext((value) => !value)}
+            >
+              {showAllNext ? "Show fewer" : `Show ${queue.length - 5} more`}
+            </button>
+          )}
         </section>
       )}
 
@@ -239,15 +262,43 @@ function TodayPage({
         <section>
           <div className="sectionHeading">
             <div><p className="eyebrow">Your current rotation</p><h2>Active series</h2></div>
+            <span>{active.length} active</span>
           </div>
-          <div className="posterRail">
-            {active.map((show, index) => (
-              <button className="showTile" key={show.id} onClick={() => onOpenShow(show.id)}>
-                <Poster show={show} priority={index < 3} />
-                <strong>{show.title}</strong>
-                <ProgressBar show={show} />
-              </button>
-            ))}
+          <div className="activeSeriesGroups">
+            {stillWatching.length > 0 && (
+              <div className="seriesGroup">
+                <div className="seriesGroupHeading">
+                  <div><h3>Still watching</h3><p>Released episodes are waiting for you.</p></div>
+                  <span>{stillWatching.length}</span>
+                </div>
+                <div className="posterRail">
+                  {stillWatching.map((show, index) => (
+                    <button className="showTile" key={show.id} onClick={() => onOpenShow(show.id)}>
+                      <Poster show={show} priority={index < 3} />
+                      <strong>{show.title}</strong>
+                      <ProgressBar show={show} releasedOnly />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {caughtUp.length > 0 && (
+              <div className="seriesGroup caughtUpGroup">
+                <div className="seriesGroupHeading">
+                  <div><h3>Caught up</h3><p>You have watched every released episode.</p></div>
+                  <span>{caughtUp.length}</span>
+                </div>
+                <div className="posterRail">
+                  {caughtUp.map((show) => (
+                    <button className="showTile" key={show.id} onClick={() => onOpenShow(show.id)}>
+                      <Poster show={show} />
+                      <strong>{show.title}</strong>
+                      <ProgressBar show={show} releasedOnly />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -282,8 +333,8 @@ function UpcomingPage({
   onToggle: (showID: string, episodeID: string) => void;
 }) {
   const today = dayStart(new Date()).valueOf();
-  const upcoming = library.shows
-    .filter((show) => show.libraryState === "active")
+  const active = library.shows.filter((show) => show.libraryState === "active");
+  const upcoming = active
     .flatMap((show) =>
       show.episodes
         .filter((episode) => {
@@ -293,13 +344,18 @@ function UpcomingPage({
         .map((episode) => ({ show, episode })),
     )
     .sort((a, b) => (a.episode.airDate ?? "").localeCompare(b.episode.airDate ?? ""));
+  const showsWithConfirmedDates = new Set(upcoming.map(({ show }) => show.id));
+  const awaitingDates = active
+    .filter((show) => show.status !== "Ended" && show.status !== "Canceled")
+    .filter((show) => !showsWithConfirmedDates.has(show.id))
+    .sort((a, b) => a.title.localeCompare(b.title));
 
-  if (upcoming.length === 0) {
+  if (upcoming.length === 0 && awaitingDates.length === 0) {
     return (
       <section className="emptyState panel smallEmpty">
         <div className="emptyOrb calendarOrb" aria-hidden="true">◷</div>
-        <h2>No confirmed releases yet.</h2>
-        <p>Future episodes from active shows will appear here after metadata is available.</p>
+        <h2>No active release plans yet.</h2>
+        <p>Confirmed future episodes from active shows will appear here.</p>
       </section>
     );
   }
@@ -310,7 +366,11 @@ function UpcomingPage({
     groups.set(key, [...(groups.get(key) ?? []), item]);
   }
   return (
-    <div className="pageStack">
+    <div className="pageStack upcomingPage">
+      <section className="upcomingSummary panel">
+        <div><span>{upcoming.length}</span><p>confirmed {upcoming.length === 1 ? "episode" : "episodes"}</p></div>
+        <div><span>{awaitingDates.length}</span><p>series awaiting dates</p></div>
+      </section>
       {[...groups.entries()].map(([label, items]) => (
         <section key={label}>
           <div className="dateHeading">
@@ -331,6 +391,24 @@ function UpcomingPage({
           </div>
         </section>
       ))}
+      {awaitingDates.length > 0 && (
+        <section>
+          <div className="sectionHeading">
+            <div><p className="eyebrow">Still on the radar</p><h2>Waiting for dates</h2></div>
+            <span>{awaitingDates.length} series</span>
+          </div>
+          <p className="sectionNote">These active series do not have a confirmed future episode date in your library yet.</p>
+          <div className="posterRail waitingRail">
+            {awaitingDates.map((show) => (
+              <button className="showTile" key={show.id} onClick={() => onOpenShow(show.id)}>
+                <Poster show={show} />
+                <strong>{show.title}</strong>
+                <small className="waitingLabel">No date announced</small>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -342,6 +420,12 @@ function ShowsPage({ library, onOpenShow }: { library: LibraryPayload; onOpenSho
     .filter((show) => filter === "all" || show.libraryState === filter)
     .filter((show) => show.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
     .sort((a, b) => a.title.localeCompare(b.title));
+  const groups = filter === "active"
+    ? [
+        { id: "watching", title: "Still watching", note: "Released episodes left to watch", shows: shows.filter((show) => !isCaughtUp(show)) },
+        { id: "caught-up", title: "Caught up", note: "All released episodes watched", shows: shows.filter((show) => isCaughtUp(show)) },
+      ].filter((group) => group.shows.length > 0)
+    : [{ id: "results", title: "", note: "", shows }];
   return (
     <div className="pageStack">
       <div className="libraryTools">
@@ -358,18 +442,28 @@ function ShowsPage({ library, onOpenShow }: { library: LibraryPayload; onOpenSho
         </div>
       </div>
       {shows.length ? (
-        <div className="showGrid">
-          {shows.map((show, index) => (
-            <button className="libraryCard" key={show.id} onClick={() => onOpenShow(show.id)}>
-              <Poster show={show} priority={index < 4} />
-              <div className="libraryCardCopy">
-                <span className={`stateDot ${show.libraryState}`} />
-                <strong>{show.title}</strong>
-                <ProgressBar show={show} />
+        groups.map((group) => (
+          <section className="libraryGroup" key={group.id}>
+            {group.title && (
+              <div className="libraryGroupHeading">
+                <div><h2>{group.title}</h2><p>{group.note}</p></div>
+                <span>{group.shows.length}</span>
               </div>
-            </button>
-          ))}
-        </div>
+            )}
+            <div className="showGrid">
+              {group.shows.map((show, index) => (
+                <button className="libraryCard" key={show.id} onClick={() => onOpenShow(show.id)}>
+                  <Poster show={show} priority={index < 4} />
+                  <div className="libraryCardCopy">
+                    <span className={`stateDot ${show.libraryState}`} />
+                    <strong>{show.title}</strong>
+                    <ProgressBar show={show} releasedOnly={filter === "active"} />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        ))
       ) : (
         <div className="noResults panel"><span>⌕</span><h2>No matching shows</h2><p>Try another title or filter.</p></div>
       )}
@@ -642,6 +736,10 @@ export function TBTempoWeb() {
     }, 5_000);
     return () => clearTimeout(timer);
   }, [notice]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [tab, selectedShowID]);
 
   const selectedShow = library.shows.find((show) => show.id === selectedShowID);
   const existingTMDB = useMemo(

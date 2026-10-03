@@ -1,18 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { applyAutomaticCompletions, libraryStateAfterProgress } from "./library";
+import {
+  applyAutomaticCompletions,
+  isCaughtUp,
+  libraryStateAfterProgress,
+  nextUp,
+  releasedRegularEpisodes,
+} from "./library";
 import { EMPTY_LIBRARY } from "./types";
 import type { Episode, Show } from "./types";
 
-function episode(id: string, options: { watched?: boolean; special?: boolean } = {}): Episode {
+function episode(
+  id: string,
+  options: { watched?: boolean; special?: boolean; airDate?: string; canceled?: boolean } = {},
+): Episode {
   return {
     id,
     seasonNumber: options.special ? 0 : 1,
     episodeNumber: Number(id),
     title: `Episode ${id}`,
     overview: "",
+    airDate: options.airDate,
     airDatePrecision: "unknown",
     isSpecial: options.special ?? false,
-    isCanceled: false,
+    isCanceled: options.canceled ?? false,
     watchEvents: options.watched
       ? [{ stableKey: `watch:${id}`, watchedAt: "2026-10-03T00:00:00Z", source: "manual", isEstimatedDate: false }]
       : [],
@@ -77,5 +87,36 @@ describe("automatic show completion", () => {
     const result = applyAutomaticCompletions({ ...structuredClone(EMPTY_LIBRARY), shows: [ended, returning] });
 
     expect(result.shows.map((item) => item.libraryState)).toEqual(["completed", "active"]);
+  });
+});
+
+describe("released episode progress", () => {
+  const now = new Date("2026-10-03T08:00:00Z");
+
+  it("keeps future episodes out of the Today queue", () => {
+    const released = episode("1", { watched: true, airDate: "2026-10-02T12:00:00Z" });
+    const future = episode("2", { airDate: "2026-10-04T12:00:00Z" });
+    const item = show([released, future]);
+
+    expect(nextUp(item, now)).toBeUndefined();
+    expect(isCaughtUp(item, now)).toBe(true);
+  });
+
+  it("returns the first unwatched released episode", () => {
+    const first = episode("1", { airDate: "2026-10-01T12:00:00Z" });
+    const second = episode("2", { airDate: "2026-10-02T12:00:00Z" });
+    const item = show([second, first]);
+
+    expect(nextUp(item, now)?.id).toBe("1");
+    expect(isCaughtUp(item, now)).toBe(false);
+  });
+
+  it("excludes specials, canceled episodes, and episodes without dates from released progress", () => {
+    const released = episode("1", { airDate: "2026-10-03T12:00:00Z" });
+    const special = episode("2", { special: true, airDate: "2026-10-01T12:00:00Z" });
+    const canceled = episode("3", { canceled: true, airDate: "2026-10-01T12:00:00Z" });
+    const undated = episode("4");
+
+    expect(releasedRegularEpisodes(show([released, special, canceled, undated]), now)).toEqual([released]);
   });
 });

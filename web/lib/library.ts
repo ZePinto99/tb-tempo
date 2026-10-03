@@ -8,6 +8,27 @@ export function watchedCount(show: Show): number {
   return regularEpisodes(show).filter((episode) => episode.watchEvents.length > 0).length;
 }
 
+function localDay(value: Date): number {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate()).valueOf();
+}
+
+export function releasedRegularEpisodes(show: Show, now = new Date()): Episode[] {
+  const today = localDay(now);
+  return regularEpisodes(show).filter((episode) => {
+    if (episode.isCanceled || !episode.airDate) return false;
+    const airDate = new Date(episode.airDate);
+    return !Number.isNaN(airDate.valueOf()) && localDay(airDate) <= today;
+  });
+}
+
+export function isCaughtUp(show: Show, now = new Date()): boolean {
+  const regular = regularEpisodes(show);
+  const released = releasedRegularEpisodes(show, now);
+  if (regular.length === 0) return false;
+  if (released.length === 0) return regular.every((episode) => episode.watchEvents.length > 0);
+  return released.every((episode) => episode.watchEvents.length > 0);
+}
+
 export function libraryStateAfterProgress(show: Show, episodes: Episode[] = show.episodes): LibraryState {
   const regular = episodes.filter((episode) => !episode.isSpecial);
   const seriesIsFinished = show.status === "Ended" || show.status === "Canceled";
@@ -27,8 +48,8 @@ export function applyAutomaticCompletions(payload: LibraryPayload): LibraryPaylo
   return changed ? { ...payload, shows } : payload;
 }
 
-export function nextUp(show: Show): Episode | undefined {
-  return regularEpisodes(show)
+export function nextUp(show: Show, now = new Date()): Episode | undefined {
+  return releasedRegularEpisodes(show, now)
     .filter((episode) => episode.watchEvents.length === 0)
     .sort((a, b) => a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber)[0];
 }
