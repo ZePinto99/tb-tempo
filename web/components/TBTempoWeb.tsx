@@ -447,7 +447,7 @@ function SettingsPage({
         <div className="settingsIcon soft">↓</div>
         <p className="eyebrow">Bring your library in</p>
         <h2>Import a backup</h2>
-        <p>The package is validated completely before your local library changes.</p>
+        <p>Choose a TB Tempo backup. On iPhone, Files may label it as a ZIP; the package is validated completely before your local library changes.</p>
         <div className="modePicker" role="group" aria-label="Import behavior">
           <button className={importMode === "merge" ? "selected" : ""} onClick={() => setImportMode("merge")}><strong>Merge</strong><small>Keep local data</small></button>
           <button className={importMode === "replace" ? "selected" : ""} onClick={() => setImportMode("replace")}><strong>Replace</strong><small>Use backup only</small></button>
@@ -455,7 +455,7 @@ function SettingsPage({
         <input
           ref={input}
           type="file"
-          accept=".tbtempo,application/zip"
+          aria-label="TB Tempo backup file"
           hidden
           onChange={(event) => {
             const file = event.target.files?.[0];
@@ -463,7 +463,7 @@ function SettingsPage({
             event.target.value = "";
           }}
         />
-        <button className="button secondary full" onClick={() => input.current?.click()}>Choose .tbtempo file</button>
+        <button className="button secondary full" onClick={() => input.current?.click()}>Choose backup file</button>
       </section>
 
       <section className="settingsCard panel installCard">

@@ -42,7 +42,11 @@ function payload(item = show()): LibraryPayload {
   return { ...structuredClone(EMPTY_LIBRARY), shows: [item] };
 }
 
-async function backupFile(data: LibraryPayload): Promise<File> {
+async function backupFile(
+  data: LibraryPayload,
+  name = "fixture.tbtempo",
+  type = "application/zip",
+): Promise<File> {
   const zip = new JSZip();
   zip.file(
     "manifest.json",
@@ -56,13 +60,18 @@ async function backupFile(data: LibraryPayload): Promise<File> {
   );
   zip.file("data.json", JSON.stringify(data));
   const bytes = await zip.generateAsync({ type: "arraybuffer" });
-  return new File([bytes], "fixture.tbtempo", { type: "application/zip" });
+  return new File([bytes], name, { type });
 }
 
 describe("TB Tempo backup compatibility", () => {
   it("reads a schema 1 .tbtempo package", async () => {
     const restored = await readBackup(await backupFile(payload()));
     expect(restored.shows[0].episodes[0].watchEvents[0].stableKey).toBe("event:one");
+  });
+
+  it("validates backup contents even when iPhone labels the file as a ZIP", async () => {
+    const restored = await readBackup(await backupFile(payload(), "fixture.zip", "application/octet-stream"));
+    expect(restored.shows).toHaveLength(1);
   });
 
   it("merges idempotently by stable event key", () => {
